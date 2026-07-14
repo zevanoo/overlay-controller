@@ -203,14 +203,12 @@
         android:clickable="true"
         android:focusable="true">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:layout_gravity="center"
-            android:text="MCO"
-            android:textColor="#000000"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:src="@drawable/ic_anime_avatar"
+            android:scaleType="fitCenter" />
     </FrameLayout>
 
 </FrameLayout>

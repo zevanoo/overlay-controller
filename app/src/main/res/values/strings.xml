@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Overlay Controller</string>
+    <string name="accessibility_desc">Allows sending simulated clicks and trackpad inputs for Minecraft Bedrock Overlay Controller.</string>
 </resources>

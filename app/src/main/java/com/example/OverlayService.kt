@@ -440,6 +440,14 @@ class OverlayService : Service() {
 
     private fun updatePointerPosition() {
         val view = pointerView ?: return
+        
+        // Dynamically clamp cursor to current screen configuration (auto-scales with Portrait/Landscape)
+        val dm = resources.displayMetrics
+        if (cursorX < 0) cursorX = 0f
+        if (cursorX > dm.widthPixels) cursorX = dm.widthPixels.toFloat()
+        if (cursorY < 0) cursorY = 0f
+        if (cursorY > dm.heightPixels) cursorY = dm.heightPixels.toFloat()
+
         pointerParams.x = cursorX.toInt()
         pointerParams.y = cursorY.toInt()
         try {
@@ -450,29 +458,43 @@ class OverlayService : Service() {
     }
 
     private fun handleAction(actionType: String) {
-        Toast.makeText(this, "Simulating action: $actionType at (${cursorX.toInt()}, ${cursorY.toInt()})", Toast.LENGTH_SHORT).show()
+        val dm = resources.displayMetrics
+        // Ensure coordinate sanity before dispatching gestures
+        if (cursorX < 0) cursorX = 0f
+        if (cursorX > dm.widthPixels) cursorX = dm.widthPixels.toFloat()
+        if (cursorY < 0) cursorY = 0f
+        if (cursorY > dm.heightPixels) cursorY = dm.heightPixels.toFloat()
 
-        /*
-         * TECHNICAL NOTE ON INPUT DISPATCHING (No Root / Accessibility):
-         * 
-         * To simulate actual screen clicks at a remote coordinate on Android without requiring ROOT privileges, 
-         * we must implement an Android `AccessibilityService`. 
-         * An AccessibilityService can safely dispatch global gestures using:
-         * 
-         * val gestureBuilder = GestureDescription.Builder()
-         * val path = Path().apply { moveTo(cursorX, cursorY) }
-         * gestureBuilder.addStroke(GestureDescription.StrokeDescription(path, 0, 100))
-         * accessibilityService.dispatchGesture(gestureBuilder.build(), null, null)
-         * 
-         * If the app runs on a Rooted device or as an ADB authorized shell utility, we could also execute:
-         * Runtime.getRuntime().exec("input tap ${cursorX} ${cursorY}")
-         * Or dispatch direct MotionEvents to the target surface.
-         * 
-         * Below, we provide visual feedback on the screen by flashing the cursor briefly to symbolize a tap event.
-         */
+        val accessService = OverlayAccessibilityService.instance
+        if (accessService != null) {
+            when (actionType) {
+                "SHIFT" -> {
+                    accessService.dispatchKey(android.view.KeyEvent.KEYCODE_SHIFT_LEFT)
+                    Toast.makeText(this, "Accessibility: SHIFT Input", Toast.LENGTH_SHORT).show()
+                }
+                "LEFT_CLICK" -> {
+                    accessService.dispatchClick(cursorX, cursorY)
+                    Toast.makeText(this, "Accessibility: Left Click at (${cursorX.toInt()}, ${cursorY.toInt()})", Toast.LENGTH_SHORT).show()
+                }
+                "RIGHT_CLICK" -> {
+                    accessService.dispatchClick(cursorX, cursorY)
+                    Toast.makeText(this, "Accessibility: Right Click at (${cursorX.toInt()}, ${cursorY.toInt()})", Toast.LENGTH_SHORT).show()
+                }
+                "SHIFT_LEFT_CLICK" -> {
+                    accessService.dispatchShiftClick(cursorX, cursorY, false)
+                    Toast.makeText(this, "Accessibility: Shift + Left Click at (${cursorX.toInt()}, ${cursorY.toInt()})", Toast.LENGTH_SHORT).show()
+                }
+                "SHIFT_RIGHT_CLICK" -> {
+                    accessService.dispatchShiftClick(cursorX, cursorY, true)
+                    Toast.makeText(this, "Accessibility: Shift + Right Click at (${cursorX.toInt()}, ${cursorY.toInt()})", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            Toast.makeText(this, "Enable Accessibility Permission! ($actionType)", Toast.LENGTH_LONG).show()
+        }
 
+        // Mouse click feedback animation
         val view = pointerView ?: return
-        // Visual indicator: flash mouse cursor alpha briefly to simulate click press
         view.post {
             view.alpha = 0.4f
             view.postDelayed({

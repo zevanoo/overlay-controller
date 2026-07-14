@@ -178,6 +178,26 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val expectedComponentName = android.content.ComponentName(this, OverlayAccessibilityService::class.java)
+        val enabledServicesSetting = Settings.Secure.getString(
+            contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+
+        val colonSplitter = android.text.TextUtils.SimpleStringSplitter(':')
+        colonSplitter.setString(enabledServicesSetting)
+
+        while (colonSplitter.hasNext()) {
+            val componentNameString = colonSplitter.next()
+            val enabledService = android.content.ComponentName.unflattenFromString(componentNameString)
+            if (enabledService != null && enabledService == expectedComponentName) {
+                return true
+            }
+        }
+        return false
+    }
+
     private fun checkAndRequestPermissions(): Boolean {
         // 1. Check Draw over other apps permission (System Alert Window)
         if (!Settings.canDrawOverlays(this)) {
@@ -196,6 +216,14 @@ class MainActivity : ComponentActivity() {
                 requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATION_PERMISSION)
                 return false
             }
+        }
+
+        // 3. Check Accessibility Service Permission
+        if (!isAccessibilityServiceEnabled()) {
+            Toast.makeText(this, "Please enable 'Overlay Controller Input Service' in Accessibility settings.", Toast.LENGTH_LONG).show()
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+            startActivity(intent)
+            return false
         }
 
         return true
@@ -217,7 +245,7 @@ class MainActivity : ComponentActivity() {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQUEST_OVERLAY_PERMISSION) {
             if (Settings.canDrawOverlays(this)) {
-                Toast.makeText(this, "Overlay permission successfully granted!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Overlay permission granted!", Toast.LENGTH_SHORT).show()
                 // Proceed with starting if notification permission is also met or not required
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || 
                     ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
@@ -238,7 +266,7 @@ class MainActivity : ComponentActivity() {
                     startOverlayService()
                 }
             } else {
-                Toast.makeText(this, "Notifications are rejected. The service continues to run, but permanent notifications may not be visible.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Notification denied. Service runs but foreground notification might not be visible.", Toast.LENGTH_LONG).show()
                 // Some Android versions will block foreground services without notification permission, 
                 // but we can attempt to start it.
                 if (Settings.canDrawOverlays(this)) {
