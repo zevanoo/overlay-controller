@@ -1,0 +1,6 @@
+{
+  "name": "Overlay Controller",
+  "description": "Overlay controller for Minecraft Bedrock (Geyser) featuring floating controls, trackpad mouse emulation, custom size/opacity scaling, and Android 13 foreground service.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
